@@ -1,12 +1,13 @@
 // This is my own helper library. Will grow with time.
 var UTILS = {
-  batchAddEvents: (arr) => {
+  batchAddEvents: (arr, fn, type) => {
     var i = 0,
         max = arr.length
     
+    type = type || 'click'
+
     for (i; i < max; i++) {
-      let type = arr[i].type || 'click'
-      arr[i].el.addEventListener(type, fn, false)
+      arr[i].addEventListener(type, fn, false)
     }
   },
   getEl: (id) => document.getElementById(id),
@@ -180,6 +181,18 @@ TTT.Messages = TTT.Messages || function Messages (_) {
     _.events.fire('messages_update', state)
   }
 
+  this.promptMarkerSelect = () => {
+    state['playmode-select'] = false
+    state['x-o-select'] = true
+  }
+
+  this.closeMessages = () => {
+    for (var i in state) {
+      state[i] = (state.hasOwnProperty(i)) ? false : state[i]
+    }
+  }
+
+  _.events.on('playmode_chosen', 'promptMarkerSelect', this)
   _.events.on('game_reset', 'gameReset', this)
 } // Messages constructor
 
@@ -213,6 +226,26 @@ TTT.Main = TTT.Main || (function (app, _) {
     'x-o-select': getEl('x-o-select'),
     'outcome': getEl('outcome')
   }
+
+  const playmode_btns = [
+    getEl('one-player'),
+    getEl('two-player')
+  ]
+
+  const newDisplay = () => display = Display({ 
+    board_btns: board_btns, 
+    start_btn: start_btn_icon,
+    scoreboard: scoreboard_el,
+    messages: messages_els
+  }, app, _)
+  const newBoard = () => board = Board(board_btns, app, _)  
+  const newScore = () => score = Score(_)
+  const newMessages = () => messages = Messages(_)
+  
+  newDisplay()
+  newMessages()
+  newScore()
+  newBoard()
   
   const Main = function () {
     
@@ -220,25 +253,17 @@ TTT.Main = TTT.Main || (function (app, _) {
     
     let state = {
       ai: false,
-      
     }
 
-    const newDisplay = () => display = Display({ 
-        board_btns: board_btns, 
-        start_btn: start_btn_icon,
-        scoreboard: scoreboard_el,
-        messages: messages_els
-    }, app, _)
-    const newBoard = () => board = Board(board_btns, app, _)  
-    const newScore = () => score = Score(_)
-    const newMessages = () => messages = Messages(_)
-    
-    newDisplay()
-    newMessages()
-    newScore()
-    newBoard()
+    this.getState = () => Object.assign({}, state)
+
+    this.setAi = (e) => {
+      state.ai = (e.currentTarget.id === 'one-player') ? true : false
+      _.events.fire('playmode_chosen', null)
+    }
     
     start_btn.addEventListener('click', this.reset)
+    _.batchAddEvents(playmode_btns, this.setAi)
     
   }
   Main.prototype.reset = function () { 

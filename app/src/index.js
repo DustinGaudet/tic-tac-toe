@@ -108,12 +108,20 @@ TTT.Display = TTT.Display || function Display (els, app, _) {
     }
   }
 
-  this.renderScore = (state) => { els.scoreboard.textContent = `Player One: ${state.p_one} || Player Two: ${state.p_two}`; console.log('renderScore fired') }
+  this.renderScore = (state) => els.scoreboard.textContent = `Player One: ${state.p_one} || Player Two: ${state.p_two}`
 
-  this.startToReset = () => { els.start_btn.className = 'reset_btn'; console.log('starttoreset fired') }
+  this.startToReset = () => els.start_btn.className = 'fa fa-refresh'
 
+  this.renderMessage = (msgs_state) => { 
+    for (let i in msgs_state) {
+      if (msgs_state.hasOwnProperty(i)) {
+        els.messages[i].className = (msgs_state[i] === true) ? 'active-message animated fadeIn' : ''
+      }
+    }
+    console.log('rendermessages worked')
+  }
 
-
+  _.events.on('messages_update', 'renderMessage', this)
   _.events.on('board_changed', 'renderBoard', this)
   _.events.on('game_reset', 'startToReset', this)
   _.events.on('score_update', 'renderScore', this)
@@ -163,23 +171,16 @@ TTT.Messages = TTT.Messages || function Messages (_) {
     'outcome': false
   }
   
-  this.toggleMessageState = (target) => {
-    state[target.parentNode.id] = !state[target.parentNode.id]
-    _.events.fire('msg_state_change', target)
+  this.gameReset = () => {
+    state = {
+      'playmode-select': true,
+      'x-o-select': false,
+      'outcome': false
+    }
+    _.events.fire('messages_update', state)
   }
-  
-  this.handleMessageBtn = (e) => {
-    selection = e.target.id
-    
-  }
-  
-  // _.batchAddEvents(els['playmode_select'],)
-  // _.batchAddEvents(els['x-o-select'], )
-  // _.batchAddEvents(els['playmode_select'], )
-  
-  
 
-  _.events.on('', '', this)
+  _.events.on('game_reset', 'gameReset', this)
 } // Messages constructor
 
 
@@ -205,7 +206,13 @@ TTT.Main = TTT.Main || (function (app, _) {
   }
   
   const start_btn = getEl('start-reset')
-  const scoreboard = getEl('scoreboard')
+  const start_btn_icon = start_btn.querySelector('i')
+  const scoreboard_el = getEl('scoreboard')
+  const messages_els = {
+    'playmode-select': getEl('playmode-select'),
+    'x-o-select': getEl('x-o-select'),
+    'outcome': getEl('outcome')
+  }
   
   const Main = function () {
     
@@ -218,14 +225,16 @@ TTT.Main = TTT.Main || (function (app, _) {
 
     const newDisplay = () => display = Display({ 
         board_btns: board_btns, 
-        start_btn: start_btn,
-        scoreboard: scoreboard
+        start_btn: start_btn_icon,
+        scoreboard: scoreboard_el,
+        messages: messages_els
     }, app, _)
     const newBoard = () => board = Board(board_btns, app, _)  
     const newScore = () => score = Score(_)
-    const newMessages = () => messages = Messages()
+    const newMessages = () => messages = Messages(_)
     
     newDisplay()
+    newMessages()
     newScore()
     newBoard()
     

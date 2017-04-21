@@ -53,7 +53,7 @@ body {
 #main-menu {
   height: 50px;
   background-color: rgba(0,0,0,0.5);
-  position: absolute;
+  position: fixed;
   top: 0;
   width: 100%;
   z-index: 1;
@@ -83,7 +83,35 @@ h1 {
 }
 
 #messages {
-  display: none;
+  height: 100%;
+  & > div {
+    display: none;
+    &.active-message {
+      font-size: 2em;
+      font-family: helvetica;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: fixed;
+      flex-direction: column;
+      top: 50px;
+      left: 0;
+      z-index: 999;
+      height: 100%;
+      width: 100%;
+      background-color: rgba(0,0,0,0.5);
+      div > button {
+        height: 100px;
+        width: 100px;
+        border-radius: 50%;
+        border: none;
+        background-color: #F3AC3C;
+        font-size: 2em;
+        color: #710005;
+        margin: 10px;
+      }
+    }
+  }
 }
 
 #ttt-app{

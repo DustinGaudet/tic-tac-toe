@@ -108,13 +108,15 @@ TTT.Display = TTT.Display || function Display (els, app, _) {
     }
   }
 
+  this.renderScore = (state) => { els.scoreboard.textContent = `Player One: ${state.p_one} || Player Two: ${state.p_two}`; console.log('renderScore fired') }
+
   this.startToReset = () => { els.start_btn.className = 'reset_btn'; console.log('starttoreset fired') }
 
 
 
   _.events.on('board_changed', 'renderBoard', this)
   _.events.on('game_reset', 'startToReset', this)
-  _.events.on('', '', this)
+  _.events.on('score_update', 'renderScore', this)
 } // Display constructor
 
 
@@ -123,11 +125,11 @@ TTT.Display = TTT.Display || function Display (els, app, _) {
 TTT.Score = TTT.Score || function Score (_) {
     
   // Enforce the "new" operator
-  if (!(this instanceof Score)) return new Score(els, app, _)
+  if (!(this instanceof Score)) return new Score(_)
   
   let state = {
-    p_one: 0,
-    p_two: 0
+    p_one: 2,
+    p_two: 1
   }
   
   this.increment = (player) => {
@@ -140,9 +142,10 @@ TTT.Score = TTT.Score || function Score (_) {
   this.reset = () => {
     state = {p_one: 0, p_two: 0}
     _.events.fire('score_update', state)
+    console.log('score reset: ', state)
   }
 
-  _.events.on('board_reset', 'reset', this)
+  _.events.on('game_reset', 'reset', this)
   _.events.on('outcome_determined', 'increment', this)
 } // Display constructor
 
@@ -184,7 +187,7 @@ TTT.Messages = TTT.Messages || function Messages (_) {
 // Constructor for the Main object. Mostly handles the app's plumbing. 
 // '_' becomes an alias for the UTILS library, and 'app' an alias for TTT
 TTT.Main = TTT.Main || (function (app, _) {
-  var board, display
+  var board, display, score, messages
   
   const {Board, Display, Messages, Score} = app
   const {getEl, makePublisher} = _
@@ -202,6 +205,7 @@ TTT.Main = TTT.Main || (function (app, _) {
   }
   
   const start_btn = getEl('start-reset')
+  const scoreboard = getEl('scoreboard')
   
   const Main = function () {
     
@@ -214,13 +218,15 @@ TTT.Main = TTT.Main || (function (app, _) {
 
     const newDisplay = () => display = Display({ 
         board_btns: board_btns, 
-        start_btn: start_btn
-    }, app, _)    
+        start_btn: start_btn,
+        scoreboard: scoreboard
+    }, app, _)
     const newBoard = () => board = Board(board_btns, app, _)  
     const newScore = () => score = Score(_)
     const newMessages = () => messages = Messages()
     
     newDisplay()
+    newScore()
     newBoard()
     
     start_btn.addEventListener('click', this.reset)

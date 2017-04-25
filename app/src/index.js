@@ -70,24 +70,39 @@ TTT.Board = TTT.Board || function Board (board_btns, app, _) {
     '8': null
   }
 
-  this.resetState = (newState) => {
-    this.setState(newState)
+  this.resetState = (new_state) => {
+    this.setState(new_state)
     _.events.fire('board_reset', null)
   }
   
-  this.setState = (newState) => {
-    state = newState
+  this.setState = (new_state) => {
+    state = new_state
+    this.checkIfFull(new_state)
     _.events.fire('board_changed', this.getState())
+  }
+
+  this.checkIfFull = (new_state) => {
+    let full = true
+    for (let i in new_state) {
+      if (new_state.hasOwnProperty(i) && full === true) {
+        full = (new_state[i] === null) ? false : true 
+      }
+    }
+    return full
   }
     
   // method for adding a marker, X or O, to the board's state.
   this.placeMarker = (obj) => {
-    const newState = this.getState()
+    const new_state = this.getState()
     const tile_num = obj.e.currentTarget.value
-    let tile_val = newState[tile_num]
+    let tile_val = new_state[tile_num]
     if (!tile_val) {
-      newState[tile_num] = obj.marker
-      this.setState(newState)
+      new_state[tile_num] = obj.marker
+      const board_is_full = this.checkIfFull(new_state)
+      if (board_is_full) {
+        _.events.fire('full_board', null)
+      }
+      this.setState(new_state)
       console.log('placeMarker ran in Board')
     }
   }
@@ -279,7 +294,8 @@ TTT.Main = TTT.Main || (function (app, _) {
       ai: false,
       p_one_is_x: false,
       is_p_one_turn: false,
-      fresh_game: true
+      fresh_game: true,
+      no_more_moves: false,
     }
 
     this.getState = () => Object.assign({}, state)
@@ -308,10 +324,13 @@ TTT.Main = TTT.Main || (function (app, _) {
       if (!state.fresh_game) {
         const winner = false /* this.checkForWin() */ 
         if (winner) {
-          _events.fire('winner_announced', winner)
+          _events.fire('outcome_determined', winner)
           console.log('winner announced!')
+        } else if (state.no_more_moves === true) {
+          console.log('draw announced. typical.')
+          _.events.fire('outcome_determined', 'draw')
         } else {
-          console.log('no winner :( womp womp')
+          console.log('no winner yet :( womp womp')
           this.togglePlayer()
         }
         console.log('tile select valid, handled tile select')
@@ -349,7 +368,8 @@ TTT.Main = TTT.Main || (function (app, _) {
         ai: false,
         p_one_is_x: false,
         is_p_one_turn: false,
-        fresh_game: true
+        fresh_game: true,
+        no_more_moves: false
       }
       _.events.fire('game_reset', {
         '0': null,
@@ -375,12 +395,15 @@ TTT.Main = TTT.Main || (function (app, _) {
         _.events.fire('tile_selected', {e, marker})
       }
     }
+
+    this.setNoMoreMoves = () => state.no_more_moves = true
     
     start_btn.addEventListener('click', this.reset)
     _.batchAddEvents(playmode_btns, this.setAi)
     _.batchAddEvents(marker_select_btns, this.setPlayerOneMarker)
     _.batchAddEvents(board_btns_arr, this.tileClicked)
     _.events.on('board_changed', 'handleTileSelect', this)
+    _.events.on('full_board', 'setNoMoreMoves', this)
 
   }
   

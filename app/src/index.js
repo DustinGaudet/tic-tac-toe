@@ -97,7 +97,7 @@ TTT.Board = TTT.Board || function Board (board_btns, app, _) {
   
     
   _.events.on('game_reset', 'resetState', this)
-  _.events.on('tile_clicked', 'placeMarker', this)
+  _.events.on('tile_selected', 'placeMarker', this)
 
   // This is temporary - remove when finished dev
   _.events.fire('board_changed', this.getState())
@@ -278,7 +278,8 @@ TTT.Main = TTT.Main || (function (app, _) {
     let state = {
       ai: false,
       p_one_is_x: false,
-      is_p_one_turn: false
+      is_p_one_turn: false,
+      fresh_game: true
     }
 
     this.getState = () => Object.assign({}, state)
@@ -295,16 +296,40 @@ TTT.Main = TTT.Main || (function (app, _) {
       _.events.fire('marker_chosen', null)
     }
 
+    this.togglePlayer = () => {
+      state.is_p_one_turn = !state.is_p_one_turn
+      if (state.is_p_one_turn === false && state.ai === true) {
+        console.log('computer plays now!')
+      }
+      console.log('toggle player!')
+    }
+
+    this.handleTileSelect = () => {
+      if (!state.fresh_game) {
+        const winner = false /* this.checkForWin() */ 
+        if (winner) {
+          _events.fire('winner_announced', winner)
+          console.log('winner announced!')
+        } else {
+          console.log('no winner :( womp womp')
+          this.togglePlayer()
+        }
+        console.log('tile select valid, handled tile select')
+      }
+    }
+
     // this.checkForWin = () => {
-    //   //determine if there's a winner!
-    //   //if there's a winner
-    //   if (false) {
-    //     // determine who won
-    //     const winner = 'you!'
-    //     console.log('someone wins hahahaha')
-    //     _.events.fire('winner_found', winner)
-    //   } else {
-    //     this.endTurn()
+    //   if(!state.fresh_game) {
+    //     //determine if there's a winner!
+    //     //if there's a winner
+    //     if (false) {
+    //       // determine who won
+    //       const winner = 'you!'
+    //       console.log('someone wins hahahaha')
+    //       _.events.fire('winner_found', winner)
+    //     } else {
+    //       this.endTurn()
+    //     }
     //   }
     // }
 
@@ -323,7 +348,8 @@ TTT.Main = TTT.Main || (function (app, _) {
       state = {
         ai: false,
         p_one_is_x: false,
-        is_p_one_turn: false
+        is_p_one_turn: false,
+        fresh_game: true
       }
       _.events.fire('game_reset', {
         '0': null,
@@ -340,12 +366,13 @@ TTT.Main = TTT.Main || (function (app, _) {
 
     this.tileClicked = (e) => {
       // if (e.currentTarget.className.length > 0) return 
+      state.fresh_game = false
       if (!state.ai || state.is_p_one_turn){
         const {is_p_one_turn, p_one_is_x} = state
         const marker = ((is_p_one_turn && p_one_is_x) || (!is_p_one_turn && !p_one_is_x)) ? 'X' : 'O'
         // e.className = (e.className.length > 0) ? e.className : `marker-${marker}`
         console.log(e.currentTarget.id, 'tileClicked ran in Main!')
-        _.events.fire('tile_clicked', {e, marker})
+        _.events.fire('tile_selected', {e, marker})
       }
     }
     
@@ -353,6 +380,7 @@ TTT.Main = TTT.Main || (function (app, _) {
     _.batchAddEvents(playmode_btns, this.setAi)
     _.batchAddEvents(marker_select_btns, this.setPlayerOneMarker)
     _.batchAddEvents(board_btns_arr, this.tileClicked)
+    _.events.on('board_changed', 'handleTileSelect', this)
 
   }
   

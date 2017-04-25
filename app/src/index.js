@@ -307,7 +307,10 @@ TTT.Main = TTT.Main || (function (app, _) {
       is_p_one_turn: false,
       fresh_game: true,
       no_more_moves: false,
-      winner: null
+      winner: {
+        player: null,
+        path: []
+      }
     }
 
     this.getState = () => Object.assign({}, state)
@@ -335,12 +338,12 @@ TTT.Main = TTT.Main || (function (app, _) {
     this.handleTileSelect = (board_state) => {
       if (!state.fresh_game) {
         state.winner = this.checkForWin(board_state)
-        console.log(state.winner)
         if (state.winner.player) {
           _.events.fire('outcome_determined', state.winner)
           console.log(`Outcome determined! Player ${state.winner.player} won!`)
         } else if (state.no_more_moves) {
           console.log('it\'s a draw, pardner!')
+          _events.fire('outcome_determined', state.winner)
         } else {
           console.log('no winner yet :( womp womp')
           this.togglePlayer()
@@ -381,7 +384,11 @@ TTT.Main = TTT.Main || (function (app, _) {
         p_one_is_x: false,
         is_p_one_turn: false,
         fresh_game: true,
-        no_more_moves: false
+        no_more_moves: false,
+        winner: {
+          player: null,
+          path: []
+        }
       }
       _.events.fire('game_reset', {
         '0': null,

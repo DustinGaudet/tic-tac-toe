@@ -70,25 +70,37 @@ TTT.Board = TTT.Board || function Board (board_btns, app, _) {
     '8': null
   }
 
-  this.stateReset = (newState) => {
+  this.resetState = (newState) => {
+    this.setState(newState)
+    _.events.fire('board_reset', null)
+  }
+  
+  this.setState = (newState) => {
     state = newState
-    _.events.fire('board_changed', newState)
+    _.events.fire('board_changed', this.getState())
   }
     
   // method for adding a marker, X or O, to the board's state.
-  this.placeMarker = (e, marker) => {
-    let btn = this.state[e.target.value] 
-    btn = (typeof btn === null) ? marker : btn
+  this.placeMarker = (obj) => {
+    const newState = this.getState()
+    const tile_num = obj.e.currentTarget.value
+    let tile_val = newState[tile_num]
+    if (!tile_val) {
+      newState[tile_num] = obj.marker
+      this.setState(newState)
+      console.log('placeMarker ran in Board')
+    }
   }
     
   // Privileged method for safely accessing state without accidental mutation
   this.getState = () => Object.assign({}, state)
   
     
-  _.events.on('game_reset', 'stateReset', this)
+  _.events.on('game_reset', 'resetState', this)
+  _.events.on('tile_clicked', 'placeMarker', this)
 
   // This is temporary - remove when finished dev
-  _.events.fire('board_changed', state)
+  _.events.fire('board_changed', this.getState())
 }// Board constructor
 
 
@@ -124,7 +136,7 @@ TTT.Display = TTT.Display || function Display (els, app, _) {
 
   _.events.on('messages_update', 'renderMessage', this)
   _.events.on('board_changed', 'renderBoard', this)
-  _.events.on('game_reset', 'startToReset', this)
+  _.events.on('board_reset', 'startToReset', this)
   _.events.on('score_update', 'renderScore', this)
 } // Display constructor
 
@@ -184,16 +196,19 @@ TTT.Messages = TTT.Messages || function Messages (_) {
   this.promptMarkerSelect = () => {
     state['playmode-select'] = false
     state['x-o-select'] = true
+    _.events.fire('messages_update', state)
   }
 
   this.closeMessages = () => {
     for (var i in state) {
       state[i] = (state.hasOwnProperty(i)) ? false : state[i]
     }
+    _.events.fire('messages_update', state)
   }
 
+  _.events.on('marker_chosen', 'closeMessages', this)
   _.events.on('playmode_chosen', 'promptMarkerSelect', this)
-  _.events.on('game_reset', 'gameReset', this)
+  _.events.on('board_reset', 'gameReset', this)
 } // Messages constructor
 
 
@@ -217,6 +232,8 @@ TTT.Main = TTT.Main || (function (app, _) {
     '7': getEl('seven'),
     '8': getEl('eight')
   }
+
+  const board_btns_arr = getEl('board').querySelectorAll('button')
   
   const start_btn = getEl('start-reset')
   const start_btn_icon = start_btn.querySelector('i')
@@ -230,6 +247,11 @@ TTT.Main = TTT.Main || (function (app, _) {
   const playmode_btns = [
     getEl('one-player'),
     getEl('two-player')
+  ]
+
+  const marker_select_btns = [
+    getEl('play-as-x'),
+    getEl('play-as-o')
   ]
 
   const newDisplay = () => display = Display({ 
@@ -247,12 +269,16 @@ TTT.Main = TTT.Main || (function (app, _) {
   newScore()
   newBoard()
   
+  // in hindsight the following constructor should have been
+  // a separate "Logic" or "Game" module, maybe?
   const Main = function () {
     
     if (!(this instanceof Main)) return new Main()
     
     let state = {
       ai: false,
+      p_one_is_x: false,
+      is_p_one_turn: false
     }
 
     this.getState = () => Object.assign({}, state)
@@ -261,23 +287,73 @@ TTT.Main = TTT.Main || (function (app, _) {
       state.ai = (e.currentTarget.id === 'one-player') ? true : false
       _.events.fire('playmode_chosen', null)
     }
+
+    this.setPlayerOneMarker = (e) => {
+      console.log('marker set for p1!')
+      state.p_one_is_x = (e.currentTarget.id === 'play-as-x') ? true : false
+      state.is_p_one_turn = state.p_one_is_x
+      _.events.fire('marker_chosen', null)
+    }
+
+    // this.checkForWin = () => {
+    //   //determine if there's a winner!
+    //   //if there's a winner
+    //   if (false) {
+    //     // determine who won
+    //     const winner = 'you!'
+    //     console.log('someone wins hahahaha')
+    //     _.events.fire('winner_found', winner)
+    //   } else {
+    //     this.endTurn()
+    //   }
+    // }
+
+    // this.endTurn = () => {
+    //   state.is_p_one_turn = !state.is_p_one_turn
+    //   if (state.ai) {
+
+    //   }
+    // }
+
+    // this.endGame = () => {
+
+    // }
+
+    this.reset = () => { 
+      state = {
+        ai: false,
+        p_one_is_x: false,
+        is_p_one_turn: false
+      }
+      _.events.fire('game_reset', {
+        '0': null,
+        '1': null,
+        '2': null,
+        '3': null,
+        '4': null,
+        '5': null,
+        '6': null,
+        '7': null,
+        '8': null
+      })
+    }
+
+    this.tileClicked = (e) => {
+      // if (e.currentTarget.className.length > 0) return 
+      if (!state.ai || state.is_p_one_turn){
+        const {is_p_one_turn, p_one_is_x} = state
+        const marker = ((is_p_one_turn && p_one_is_x) || (!is_p_one_turn && !p_one_is_x)) ? 'X' : 'O'
+        // e.className = (e.className.length > 0) ? e.className : `marker-${marker}`
+        console.log(e.currentTarget.id, 'tileClicked ran in Main!')
+        _.events.fire('tile_clicked', {e, marker})
+      }
+    }
     
     start_btn.addEventListener('click', this.reset)
     _.batchAddEvents(playmode_btns, this.setAi)
-    
-  }
-  Main.prototype.reset = function () { 
-    UTILS.events.fire('game_reset', {
-      '0': null,
-      '1': null,
-      '2': null,
-      '3': null,
-      '4': null,
-      '5': null,
-      '6': null,
-      '7': null,
-      '8': null
-    })
+    _.batchAddEvents(marker_select_btns, this.setPlayerOneMarker)
+    _.batchAddEvents(board_btns_arr, this.tileClicked)
+
   }
   
   return Main

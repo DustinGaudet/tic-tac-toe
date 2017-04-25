@@ -339,6 +339,8 @@ TTT.Main = TTT.Main || (function (app, _) {
         if (state.winner.player) {
           _.events.fire('outcome_determined', state.winner)
           console.log(`Outcome determined! Player ${state.winner.player} won!`)
+        } else if (state.no_more_moves) {
+          console.log('it\'s a draw, pardner!')
         } else {
           console.log('no winner yet :( womp womp')
           this.togglePlayer()

@@ -235,6 +235,17 @@ TTT.Main = TTT.Main || (function (app, _) {
   
   const {Board, Display, Messages, Score} = app
   const {getEl, makePublisher} = _
+
+  const victory_paths = [
+    [0,1,2],
+    [3,4,5],
+    [6,7,8],
+    [0,3,6],
+    [1,4,7],
+    [2,5,8],
+    [0,4,8],
+    [2,4,6]
+  ]
   
   const board_btns = {
     '0': getEl('zero'),
@@ -296,6 +307,7 @@ TTT.Main = TTT.Main || (function (app, _) {
       is_p_one_turn: false,
       fresh_game: true,
       no_more_moves: false,
+      winner: null
     }
 
     this.getState = () => Object.assign({}, state)
@@ -320,15 +332,13 @@ TTT.Main = TTT.Main || (function (app, _) {
       console.log('toggle player!')
     }
 
-    this.handleTileSelect = () => {
+    this.handleTileSelect = (board_state) => {
       if (!state.fresh_game) {
-        const winner = false /* this.checkForWin() */ 
-        if (winner) {
-          _events.fire('outcome_determined', winner)
-          console.log('winner announced!')
-        } else if (state.no_more_moves === true) {
-          console.log('draw announced. typical.')
-          _.events.fire('outcome_determined', 'draw')
+        state.winner = this.checkForWin(board_state)
+        console.log(state.winner)
+        if (state.winner.player) {
+          _.events.fire('outcome_determined', state.winner)
+          console.log(`Outcome determined! Player ${state.winner.player} won!`)
         } else {
           console.log('no winner yet :( womp womp')
           this.togglePlayer()
@@ -337,20 +347,20 @@ TTT.Main = TTT.Main || (function (app, _) {
       }
     }
 
-    // this.checkForWin = () => {
-    //   if(!state.fresh_game) {
-    //     //determine if there's a winner!
-    //     //if there's a winner
-    //     if (false) {
-    //       // determine who won
-    //       const winner = 'you!'
-    //       console.log('someone wins hahahaha')
-    //       _.events.fire('winner_found', winner)
-    //     } else {
-    //       this.endTurn()
-    //     }
-    //   }
-    // }
+    this.checkForWin = (board_state) => {
+      if(!state.fresh_game) {
+        const b = board_state
+        const winner = victory_paths.reduce((acc, path) => {
+          if (!acc.player && b[path[0]] && b[path[0]] === b[path[1]] && b[path[1]] === b[path[2]]) {
+            acc.path = path
+            acc.player = ((state.p_one_is_x && b[path[0]] === 'X') || (!state.p_one_is_x && b[path[0]] === 'O')) ? 'one' : 'two'
+          }
+          return acc
+        }, {player: null, path: []})
+
+        return winner
+      }
+    }
 
     // this.endTurn = () => {
     //   state.is_p_one_turn = !state.is_p_one_turn
@@ -402,8 +412,10 @@ TTT.Main = TTT.Main || (function (app, _) {
     _.batchAddEvents(playmode_btns, this.setAi)
     _.batchAddEvents(marker_select_btns, this.setPlayerOneMarker)
     _.batchAddEvents(board_btns_arr, this.tileClicked)
-    _.events.on('board_changed', 'handleTileSelect', this)
+
     _.events.on('full_board', 'setNoMoreMoves', this)
+    _.events.on('board_changed', 'checkForWin', this)
+    _.events.on('board_changed', 'handleTileSelect', this)
 
   }
   

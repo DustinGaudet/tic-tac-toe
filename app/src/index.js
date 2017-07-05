@@ -1,5 +1,8 @@
 // This is my own helper library. Will grow with time.
 var UTILS = {
+  
+  // Take an array of elements and add an event listener of specified type to each,
+  // with specified callback.
   batchAddEvents: (arr, fn, type) => {
     var i = 0,
         max = arr.length
@@ -10,7 +13,13 @@ var UTILS = {
       arr[i].addEventListener(type, fn, false)
     }
   },
+
   getEl: (id) => document.getElementById(id),
+  
+  // Enables pubsub. on() adds new subscribers with callbacks. remove() removes
+  // subscribers. fire() publishes an event and passes pub data for callbacks. 
+  // visitSubscribers() iterates over subscribers and performs the action specified in 
+  // previous funcs.
   events: {
     subscribers: {
       any: []
@@ -247,6 +256,7 @@ TTT.Main = TTT.Main || (function (app, _) {
     [2,4,6]
   ]
   
+  // used by display and board modules
   const board_btns = {
     '0': getEl('zero'),
     '1': getEl('one'),
@@ -259,8 +269,10 @@ TTT.Main = TTT.Main || (function (app, _) {
     '8': getEl('eight')
   }
 
+  // Probably redundant, used to set a batch of click events to btns
   const board_btns_arr = getEl('board').querySelectorAll('button')
   
+  // getting important elements for event handling etc.
   const start_btn = getEl('start-reset')
   const start_btn_icon = start_btn.querySelector('i')
   const scoreboard_el = getEl('scoreboard')
@@ -269,17 +281,16 @@ TTT.Main = TTT.Main || (function (app, _) {
     'x-o-select': getEl('x-o-select'),
     'outcome': getEl('outcome')
   }
-
   const playmode_btns = [
     getEl('one-player'),
     getEl('two-player')
   ]
-
   const marker_select_btns = [
     getEl('play-as-x'),
     getEl('play-as-o')
   ]
 
+  // funcs that can set / reset instances of modules. Might be excessive.
   const newDisplay = () => display = Display({ 
     board_btns: board_btns, 
     start_btn: start_btn_icon,
@@ -313,13 +324,17 @@ TTT.Main = TTT.Main || (function (app, _) {
       }
     }
 
+    // this returns a clone of the state to avoid direct manipulation.
+    // Not sure if needed, not used consistently.
     this.getState = () => Object.assign({}, state)
 
+    // Set AI in state based on playmode selection (one player vs two)
     this.setAi = (e) => {
       state.ai = (e.currentTarget.id === 'one-player') ? true : false
       _.events.fire('playmode_chosen', null)
     }
 
+    // Set player one's marker in state based on selection (x vs o)
     this.setPlayerOneMarker = (e) => {
       console.log('marker set for p1!')
       state.p_one_is_x = (e.currentTarget.id === 'play-as-x') ? true : false
@@ -327,6 +342,7 @@ TTT.Main = TTT.Main || (function (app, _) {
       _.events.fire('marker_chosen', null)
     }
 
+    // Toggles whose turn it is (p1 vs p2/AI)
     this.togglePlayer = () => {
       state.is_p_one_turn = !state.is_p_one_turn
       if (state.is_p_one_turn === false && state.ai === true) {
@@ -335,6 +351,8 @@ TTT.Main = TTT.Main || (function (app, _) {
       console.log('toggle player!')
     }
 
+    // When tile is selected, check if someone has won. If so fire 'outcome_determined' event with winner.
+    // if no winner and no more moves, fire 'outcome_determined' event as a draw. Otherwise toggle player.
     this.handleTileSelect = (board_state) => {
       if (!state.fresh_game) {
         state.winner = this.checkForWin(board_state)
@@ -352,6 +370,9 @@ TTT.Main = TTT.Main || (function (app, _) {
       }
     }
 
+    // Take board state, iterate over victory paths. If first tile of path in board state 
+    // has a tile, compare to second tile of path in board, then third. If they all match,
+    // determine which player won by comparing marker to player settings.
     this.checkForWin = (board_state) => {
       if(!state.fresh_game) {
         const b = board_state
